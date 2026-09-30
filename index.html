@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#5b55d6">
+<link rel="manifest" href="manifest.json">
+<title>Learn & Play</title>
+<style>
+*{box-sizing:border-box}body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Tahoma,Arial,sans-serif;background:#f6f7fb;color:#202238}
+button,input,select,textarea{font:inherit}button{cursor:pointer;border:0}.app{max-width:1100px;margin:auto;padding:18px}.top{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:18px}.brand{display:flex;align-items:center;gap:12px}.logo{width:48px;height:48px;border-radius:15px;background:#5b55d6;color:#fff;display:grid;place-items:center;font-weight:800;font-size:21px}.brand h1{font-size:21px;margin:0}.brand p{margin:3px 0 0;color:#72758a;font-size:13px}.pill{padding:9px 13px;border-radius:999px;background:#fff;border:1px solid #e7e8ef;color:#55596e}
+nav{display:flex;gap:8px;overflow:auto;padding-bottom:4px;margin-bottom:18px}nav button{white-space:nowrap;background:#fff;color:#55596e;padding:11px 14px;border-radius:12px;border:1px solid #e7e8ef}nav button.active{background:#5b55d6;color:#fff;border-color:#5b55d6}
+.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}.card{background:#fff;border:1px solid #e7e8ef;border-radius:18px;padding:18px;box-shadow:0 4px 18px rgba(40,42,70,.04)}.stat b{font-size:28px;display:block;margin-top:7px}.muted{color:#777b90;font-size:13px}.section{margin:18px 0}.section h2{font-size:19px;margin:0 0 12px}.actions{display:flex;gap:8px;flex-wrap:wrap}.primary{background:#5b55d6;color:#fff;padding:12px 16px;border-radius:12px}.secondary{background:#f0f0fb;color:#4e49ba;padding:12px 16px;border-radius:12px}.danger{background:#fff0f0;color:#b04444;padding:10px 13px;border-radius:10px}
+.formgrid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}.field label{display:block;font-size:13px;margin-bottom:6px;color:#55596e}.field input,.field select,.field textarea{width:100%;padding:12px;border:1px solid #dfe1ea;border-radius:11px;background:#fff;outline:none}.field textarea{min-height:100px;resize:vertical}.full{grid-column:1/-1}
+table{width:100%;border-collapse:collapse}.tablewrap{overflow:auto}th,td{padding:12px 8px;border-bottom:1px solid #eee;text-align:right;white-space:nowrap}th{font-size:13px;color:#74778b}
+.badge{display:inline-block;padding:5px 9px;border-radius:999px;background:#f0f0fb;color:#514cc2;font-size:12px}.progress{height:9px;background:#ececf3;border-radius:99px;overflow:hidden}.progress>i{display:block;height:100%;background:#5b55d6;border-radius:99px}
+.hero{padding:22px;background:linear-gradient(135deg,#5b55d6,#7771df);color:#fff;border-radius:20px}.hero h2{margin:0 0 7px}.hero p{margin:0;opacity:.9}
+.hidden{display:none!important}.empty{text-align:center;padding:30px;color:#777b90}
+.modal{position:fixed;inset:0;background:rgba(20,22,40,.48);display:grid;place-items:center;padding:18px;z-index:10}.modalbox{background:#fff;border-radius:20px;width:min(700px,100%);max-height:90vh;overflow:auto;padding:20px}.modalhead{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}.close{background:#eeeef5;border-radius:10px;padding:8px 11px}
+.toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:#22243a;color:#fff;padding:11px 16px;border-radius:12px;z-index:20}
+@media(max-width:760px){.app{padding:12px}.grid{grid-template-columns:repeat(2,1fr)}.formgrid{grid-template-columns:1fr}.full{grid-column:auto}.card{padding:15px}.hero{padding:18px}.top{align-items:flex-start}}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script>
+const KEY="learnplay_real_demo_v1";
+const needs=["صعوبات التعلم","اضطراب طيف التوحد","اضطراب فرط الحركة وتشتت الانتباه","إعاقة ذهنية","إعاقة سمعية","إعاقة بصرية","تأخر لغوي/تواصل","احتياجات تعليمية أخرى"];
+let db=JSON.parse(localStorage.getItem(KEY)||'null')||{
+ teacher:{name:"المعلمة",email:""},
+ students:[], activities:[
+  {id:1,title:"تمييز الألوان",area:"إدراكي",need:"صعوبات التعلم",level:"مبتدئ",points:10},
+  {id:2,title:"مطابقة الصور",area:"انتباه وتواصل",need:"اضطراب طيف التوحد",level:"مبتدئ",points:10}
+ ], view:"home"
+};
+function save(){localStorage.setItem(KEY,JSON.stringify(db))}
+function esc(s){return String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]))}
+function nav(){
+return `<nav>
+<button class="${db.view==='home'?'active':''}" onclick="go('home')">الرئيسية</button>
+<button class="${db.view==='students'?'active':''}" onclick="go('students')">الطلاب</button>
+<button class="${db.view==='activities'?'active':''}" onclick="go('activities')">الأنشطة</button>
+<button class="${db.view==='reports'?'active':''}" onclick="go('reports')">التقارير</button>
+</nav>`;
+}
+function layout(content){
+document.getElementById("root").innerHTML=`<div class="app">
+<div class="top"><div class="brand"><div class="logo">L&P</div><div><h1>Learn & Play</h1><p>منصة تعليمية فردية للمتعلمين ذوي الاحتياجات التعليمية</p></div></div><span class="pill">وضع المعلمة</span></div>
+${nav()}${content}</div>`;
+}
+function go(v){db.view=v;save();render()}
+function render(){
+if(db.view==='students') return studentsPage();
+if(db.view==='activities') return activitiesPage();
+if(db.view==='reports') return reportsPage();
+homePage();
+}
+function homePage(){
+const n=db.students.length, a=db.activities.length;
+layout(`<div class="hero"><h2>أهلًا بكِ في Learn & Play 👋</h2><p>أنشئي ملفًا لكل طالب، حددي احتياجه ومستواه، ثم اختاري أنشطة مناسبة وتابعي التقدم.</p></div>
+<div class="grid section">
+<div class="card stat"><span class="muted">عدد الطلاب</span><b>${n}</b></div>
+<div class="card stat"><span class="muted">الأنشطة</span><b>${a}</b></div>
+<div class="card stat"><span class="muted">متوسط التقدم</span><b>${avgProgress()}%</b></div>
+<div class="card stat"><span class="muted">حالة المنصة</span><b style="font-size:18px">جاهزة</b></div>
+</div>
+<div class="section card"><h2>ابدئي بسرعة</h2><div class="actions">
+<button class="primary" onclick="openStudent()">+ إضافة طالب</button>
+<button class="secondary" onclick="openActivity()">+ إنشاء نشاط</button>
+<button class="secondary" onclick="go('reports')">عرض التقارير</button></div></div>
+<div class="section card"><h2>ملاحظة مهمة</h2><p class="muted">الاحتياج التعليمي يساعد في التخصيص، لكنه لا يحدد قدرات الطالب وحده. استخدمي التقييم الفردي والملاحظة المستمرة لتحديد الأهداف والأنشطة.</p></div>`);
+}
+function avgProgress(){if(!db.students.length)return 0;return Math.round(db.students.reduce((x,s)=>x+(s.progress||0),0)/db.students.length)}
+function studentsPage(){
+let rows=db.students.map(s=>`<tr><td><b>${esc(s.name)}</b><div class="muted">${esc(s.age)} سنة</div></td><td><span class="badge">${esc(s.need)}</span></td><td>${esc(s.level)}</td><td><div class="progress"><i style="width:${s.progress||0}%"></i></div><small>${s.progress||0}%</small></td><td><button class="secondary" onclick="studentDetails(${s.id})">فتح</button></td></tr>`).join("");
+layout(`<div class="section card"><div class="top"><div><h2>ملفات الطلاب</h2><p class="muted">استخدمي بيانات تجريبية فقط أثناء الاختبار.</p></div><button class="primary" onclick="openStudent()">+ إضافة طالب</button></div>
+<div class="tablewrap">${rows?`<table><thead><tr><th>الطالب</th><th>الاحتياج</th><th>المستوى</th><th>التقدم</th><th></th></tr></thead><tbody>${rows}</tbody></table>`:`<div class="empty">لسه مفيش طلاب. اضغطي «إضافة طالب» للبدء.</div>`}</div></div>`);
+}
+function openStudent(){
+showModal(`<div class="modalhead"><h2>إضافة طالب</h2><button class="close" onclick="closeModal()">إغلاق</button></div>
+<form onsubmit="addStudent(event)"><div class="formgrid">
+<div class="field"><label>الاسم</label><input id="sn" required placeholder="اسم تجريبي"></div>
+<div class="field"><label>العمر</label><input id="sa" type="number" min="3" max="99" required></div>
+<div class="field"><label>الاحتياج التعليمي</label><select id="sneed">${needs.map(n=>`<option>${n}</option>`).join("")}</select></div>
+<div class="field"><label>المستوى</label><select id="sl"><option>مبتدئ</option><option>متوسط</option><option>متقدم</option></select></div>
+<div class="field full"><label>ملاحظات المعلمة</label><textarea id="snotes" placeholder="أهداف أو ملاحظات تعليمية مختصرة"></textarea></div>
+</div><div class="actions" style="margin-top:14px"><button class="primary">حفظ الطالب</button></div></form>`);
+}
+function addStudent(e){e.preventDefault();db.students.push({id:Date.now(),name:sn.value,age:sa.value,need:sneed.value,level:sl.value,notes:snotes.value,progress:0,completed:0});save();closeModal();toast("تمت إضافة الطالب");render()}
+function studentDetails(id){
+const s=db.students.find(x=>x.id===id); if(!s)return;
+showModal(`<div class="modalhead"><h2>${esc(s.name)}</h2><button class="close" onclick="closeModal()">إغلاق</button></div>
+<p><span class="badge">${esc(s.need)}</span> <span class="badge">${esc(s.level)}</span></p>
+<div class="card"><b>التقدم: ${s.progress||0}%</b><div class="progress" style="margin-top:10px"><i style="width:${s.progress||0}%"></i></div><p class="muted">الأنشطة المكتملة: ${s.completed||0}</p></div>
+<div class="card" style="margin-top:12px"><b>ملاحظات</b><p class="muted">${esc(s.notes)||"لا توجد ملاحظات."}</p></div>
+<div class="actions" style="margin-top:14px"><button class="primary" onclick="assignProgress(${s.id})">تسجيل نشاط مكتمل</button><button class="danger" onclick="deleteStudent(${s.id})">حذف الملف</button></div>`);
+}
+function assignProgress(id){let s=db.students.find(x=>x.id===id);s.completed=(s.completed||0)+1;s.progress=Math.min(100,(s.progress||0)+10);save();closeModal();toast("تم تحديث التقدم");studentDetails(id)}
+function deleteStudent(id){if(!confirm("حذف الملف التجريبي؟"))return;db.students=db.students.filter(s=>s.id!==id);save();closeModal();render()}
+function activitiesPage(){
+let cards=db.activities.map(a=>`<div class="card"><span class="badge">${esc(a.area)}</span><h3>${esc(a.title)}</h3><p class="muted">${esc(a.need)} • ${esc(a.level)} • ${a.points} نقطة</p><button class="secondary" onclick="editActivity(${a.id})">تعديل</button></div>`).join("");
+layout(`<div class="section"><div class="top"><div><h2>الأنشطة</h2><p class="muted">أنشطة قابلة للتخصيص حسب الهدف والمستوى.</p></div><button class="primary" onclick="openActivity()">+ إنشاء نشاط</button></div><div class="grid" style="grid-template-columns:repeat(3,1fr)">${cards}</div></div>`);
+}
+function openActivity(existing){
+let a=existing||{id:0,title:"",area:"إدراكي",need:needs[0],level:"مبتدئ",points:10};
+showModal(`<div class="modalhead"><h2>${a.id?"تعديل نشاط":"إنشاء نشاط"}</h2><button class="close" onclick="closeModal()">إغلاق</button></div>
+<form onsubmit="saveActivity(event,${a.id})"><div class="formgrid">
+<div class="field full"><label>عنوان النشاط</label><input id="at" required value="${esc(a.title)}" placeholder="مثال: مطابقة الأشكال"></div>
+<div class="field"><label>المجال</label><input id="aa" value="${esc(a.area)}"></div>
+<div class="field"><label>الاحتياج المستهدف</label><select id="an">${needs.map(n=>`<option ${n===a.need?"selected":""}>${n}</option>`).join("")}</select></div>
+<div class="field"><label>المستوى</label><select id="al">${["مبتدئ","متوسط","متقدم"].map(n=>`<option ${n===a.level?"selected":""}>${n}</option>`).join("")}</select></div>
+<div class="field"><label>النقاط</label><input id="ap" type="number" min="1" max="100" value="${a.points}"></div>
+</div><div class="actions" style="margin-top:14px"><button class="primary">حفظ النشاط</button></div></form>`);
+}
+function saveActivity(e,id){e.preventDefault();let a={id:id||Date.now(),title:at.value,area:aa.value,need:an.value,level:al.value,points:+ap.value};if(id)db.activities=db.activities.map(x=>x.id===id?a:x);else db.activities.push(a);save();closeModal();toast("تم حفظ النشاط");render()}
+function editActivity(id){openActivity(db.activities.find(a=>a.id===id))}
+function reportsPage(){
+let byNeed={};db.students.forEach(s=>{byNeed[s.need]=(byNeed[s.need]||0)+1});
+let needsRows=Object.entries(byNeed).map(([n,c])=>`<tr><td>${esc(n)}</td><td>${c}</td></tr>`).join("");
+layout(`<div class="section card"><h2>التقارير والمتابعة</h2><div class="grid"><div class="card stat"><span class="muted">طلاب مسجلون</span><b>${db.students.length}</b></div><div class="card stat"><span class="muted">متوسط التقدم</span><b>${avgProgress()}%</b></div><div class="card stat"><span class="muted">أنشطة مكتملة</span><b>${db.students.reduce((x,s)=>x+(s.completed||0),0)}</b></div><div class="card stat"><span class="muted">أنشطة منشأة</span><b>${db.activities.length}</b></div></div></div>
+<div class="section card"><h2>التوزيع حسب الاحتياج</h2>${needsRows?`<table><thead><tr><th>الاحتياج</th><th>العدد</th></tr></thead><tbody>${needsRows}</tbody></table>`:`<div class="empty">أضيفي طلابًا لظهور التقرير.</div>`}</div>`);
+}
+function showModal(html){let m=document.createElement("div");m.id="modal";m.className="modal";m.innerHTML=`<div class="modalbox">${html}</div>`;document.body.appendChild(m)}
+function closeModal(){document.getElementById("modal")?.remove()}
+function toast(t){let x=document.createElement("div");x.className="toast";x.textContent=t;document.body.appendChild(x);setTimeout(()=>x.remove(),1800)}
+if("serviceWorker" in navigator) navigator.serviceWorker.register("./sw.js").catch(()=>{});
+render();
+</script>
+</body></html>
