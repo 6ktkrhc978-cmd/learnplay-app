@@ -1,6 +1,5 @@
-Learn & Play - PWA
-1) فكّي الضغط عن الملف.
-2) ارفعي محتويات المجلد إلى Netlify Drop أو خدمة استضافة HTTPS.
-3) افتحي الرابط من Safari ثم Share > Add to Home Screen.
-هذه نسخة تجريبية: البيانات محفوظة محليًا في المتصفح فقط. لا تضعي بيانات حقيقية لطلاب أثناء الاختبار.
-للاستخدام الحقيقي مع أطفال وبيانات احتياجات تعليمية يلزم Backend آمن، تسجيل دخول وصلاحيات، قاعدة بيانات، نسخ احتياطي، سياسة خصوصية ومراجعة قانونية مناسبة.
+Learn & Play v5
+- Added demo student login with a generated 6-digit student code.
+- Student sees activities filtered by need and level and can record completion.
+- Demo/localStorage only; do not use real student data or passwords.
+- Real deployment requires secure backend, authentication, database, privacy/access controls.
