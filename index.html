@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#5b55d6">
 <link rel="manifest" href="manifest.json">
 <title>Learn & Play</title>
-<meta name="app-version" content="v9">
+<meta name="app-version" content="v10">
 <style>
 *{box-sizing:border-box}body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Tahoma,Arial,sans-serif;background:#f6f7fb;color:#202238}
 button,input,select,textarea{font:inherit}button{cursor:pointer;border:0}.app{max-width:1100px;margin:auto;padding:18px}.top{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:18px}.brand{display:flex;align-items:center;gap:12px}.logo{width:48px;height:48px;border-radius:15px;background:#5b55d6;color:#fff;display:grid;place-items:center;font-weight:800;font-size:21px}.brand h1{font-size:21px;margin:0}.brand p{margin:3px 0 0;color:#72758a;font-size:13px}.pill{padding:9px 13px;border-radius:999px;background:#fff;border:1px solid #e7e8ef;color:#55596e}
@@ -50,14 +50,50 @@ function studentHome(id){const s=db.students.find(x=>x.id===id);if(!s){studentLo
  const assignedIds=Array.isArray(s.assignedActivities)?s.assignedActivities:[];
  const assigned=db.activities.filter(a=>assignedIds.includes(a.id));
  const recommended=db.activities.filter(a=>!assignedIds.includes(a.id)&&(!a.need||a.need===s.need)&&(!a.level||a.level===s.level));
- const card=a=>`<div class="card"><span class="badge">${esc(a.area)}</span><h3>${esc(a.title)}</h3><p class="muted">${esc(a.level)} • ${a.points} نقطة</p><button class="primary" onclick="completeStudentActivity(${s.id},${a.id})">إنجاز النشاط</button></div>`;
+ const card=a=>`<div class="card"><span class="badge">${esc(a.area)}</span><h3>${esc(a.title)}</h3><p class="muted">${esc(a.level)} • ${a.points} نقطة</p><button class="primary" onclick="startStudentActivity(${s.id},${a.id})">إنجاز النشاط</button></div>`;
  layout(`<div class="hero"><h2>أهلًا ${esc(s.name)} 👋</h2><p>دي أنشطتك المخصصة والمقترحة بناءً على ملفك التعليمي.</p></div>
  <div class="grid section"><div class="card stat"><span class="muted">التقدم</span><b>${s.progress||0}%</b></div><div class="card stat"><span class="muted">أنشطة مكتملة</span><b>${s.completed||0}</b></div></div>
  <div class="section"><div class="top"><div><h2>أنشطتي المخصصة 🎯</h2><p class="muted">دي الأنشطة اللي المعلمة عيّنتها لكِ.</p></div><button class="secondary" onclick="studentLogout()">خروج</button></div>
  <div class="grid" style="grid-template-columns:repeat(3,1fr)">${assigned.length?assigned.map(card).join(""):`<div class="card"><div class="empty">لسه مفيش أنشطة مخصصة ليكِ.</div></div>`}</div></div>
  <div class="section"><h2>أنشطة مقترحة 📚</h2><p class="muted">اختيارات مناسبة للاحتياج والمستوى.</p><div class="grid" style="grid-template-columns:repeat(3,1fr)">${recommended.length?recommended.map(card).join(""):`<div class="card"><div class="empty">مفيش اقتراحات إضافية حاليًا.</div></div>`}</div></div>`);
 }
-function completeStudentActivity(studentId,activityId){const s=db.students.find(x=>x.id===studentId);if(!s)return;s.completed=(s.completed||0)+1;s.progress=Math.min(100,(s.progress||0)+10);save();toast("أحسنت! تم تسجيل النشاط 🎉");studentHome(studentId)}
+function activityTaskData(a){
+  const title=a.title||"النشاط";
+  if(title.includes("الألوان")) return [
+    {q:"اختاري اللون المطلوب: الأحمر",opts:["🔵 أزرق","🔴 أحمر","🟢 أخضر"],ans:1},
+    {q:"اختاري اللون المطلوب: الأخضر",opts:["🟡 أصفر","🟢 أخضر","🔴 أحمر"],ans:1},
+    {q:"أي لون مختلف عن الباقي؟",opts:["🔵 أزرق","🔴 أحمر","🔵 أزرق"],ans:1}
+  ];
+  if(title.includes("مطابقة الصور")) return [
+    {q:"ما العنصر الذي يطابق 🍎؟",opts:["🍌 موز","🍎 تفاحة","🚗 سيارة"],ans:1},
+    {q:"ما العنصر الذي يطابق 🐟؟",opts:["🐟 سمكة","🐱 قطة","🌳 شجرة"],ans:0},
+    {q:"ما العنصر الذي يطابق 🚗؟",opts:["🍎 تفاحة","🚗 سيارة","🐟 سمكة"],ans:1}
+  ];
+  return [
+    {q:`سؤال 1 في «${title}»: اختاري الإجابة الصحيحة.`,opts:["أ","ب","ج"],ans:0},
+    {q:`سؤال 2 في «${title}»: اختاري الإجابة الصحيحة.`,opts:["أ","ب","ج"],ans:1},
+    {q:`سؤال 3 في «${title}»: اختاري الإجابة الصحيحة.`,opts:["أ","ب","ج"],ans:2}
+  ];
+}
+function startStudentActivity(studentId,activityId){
+  const a=db.activities.find(x=>x.id===activityId); if(!a)return;
+  const qs=activityTaskData(a);
+  showModal(`<div class="modalhead"><h2>${esc(a.title)} 🎯</h2><button class="close" onclick="closeModal()">إغلاق</button></div>
+  <p class="muted">جاوبي على الأسئلة ثم اضغطي «تسليم النشاط». سيتم تسجيل النشاط كمكتمل بعد التسليم.</p>
+  <form onsubmit="submitStudentActivity(event,${studentId},${activityId})">
+  ${qs.map((q,i)=>`<div class="card" style="margin:12px 0"><h3 style="margin-top:0">${i+1}. ${esc(q.q)}</h3><div class="actions">${q.opts.map((o,j)=>`<label style="background:#f6f6fc;padding:10px 12px;border-radius:10px;display:flex;align-items:center;gap:7px"><input type="radio" name="q${i}" value="${j}" required> ${esc(o)}</label>`).join("")}</div></div>`).join("")}
+  <div class="actions"><button class="primary">تسليم النشاط ✅</button></div></form>`);
+}
+function submitStudentActivity(e,studentId,activityId){
+  e.preventDefault();
+  const a=db.activities.find(x=>x.id===activityId); const qs=activityTaskData(a); let score=0;
+  qs.forEach((q,i)=>{const el=document.querySelector(`input[name="q${i}"]:checked`);if(el&&Number(el.value)===q.ans)score++;});
+  const s=db.students.find(x=>x.id===studentId); if(!s)return;
+  s.completed=(s.completed||0)+1; s.progress=Math.min(100,(s.progress||0)+10);
+  if(!Array.isArray(s.activityResults))s.activityResults=[];
+  s.activityResults.push({activityId,score,total:qs.length,at:new Date().toISOString()});
+  save(); closeModal(); toast(`تم تسليم النشاط — النتيجة ${score}/${qs.length} 🎉`); studentHome(studentId);
+}
 function openTeacherAuth(){
  const t=db.teacher||{};
  showModal(`<div class="modalhead"><h2>${t.loggedIn?"حساب المعلمة":"دخول المعلمة"}</h2><button class="close" onclick="closeModal()">إغلاق</button></div>

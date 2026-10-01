@@ -1,5 +1,7 @@
-Learn & Play v5
-- Added demo student login with a generated 6-digit student code.
-- Student sees activities filtered by need and level and can record completion.
-- Demo/localStorage only; do not use real student data or passwords.
-- Real deployment requires secure backend, authentication, database, privacy/access controls.
+Learn & Play v9 — demo assignment flow
+
+- Student login with generated 6-digit code.
+- Teacher can assign activities directly from the student list or student profile.
+- Student sees assigned activities in “أنشطتي المخصصة”.
+- Demo/localStorage only; use dummy data during testing.
+- Real deployment requires secure backend, authentication, access controls, privacy policy, backups, and appropriate legal review.
