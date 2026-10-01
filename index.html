@@ -35,7 +35,7 @@ let db=JSON.parse(localStorage.getItem(KEY)||'null')||{
 };
 // Migration: give older demo students a 6-digit login code if they do not have one.
 if(Array.isArray(db.students)){
-  db.students.forEach(s=>{ if(!s.code) s.code=String(Math.floor(100000+Math.random()*900000)); });
+  db.students.forEach(s=>{ if(!s.code) s.code=String(Math.floor(100000+Math.random()*900000)); if(!Array.isArray(s.assignedActivities)) s.assignedActivities=[]; });
 }
 function save(){localStorage.setItem(KEY,JSON.stringify(db))}
 function makeStudentCode(){let code; do{code=String(Math.floor(100000+Math.random()*900000))}while(db.students.some(s=>s.code===code));return code}
@@ -46,11 +46,15 @@ function openStudentLogin(){
 function studentLogin(e){e.preventDefault();const code=document.getElementById("studentCode").value.trim();const s=db.students.find(x=>x.code===code);if(!s){toast("الكود غير صحيح أو غير موجود");return}db.studentSession={id:s.id};save();closeModal();studentHome(s.id)}
 function studentLogout(){db.studentSession=null;save();toast("تم تسجيل الخروج");render()}
 function studentHome(id){const s=db.students.find(x=>x.id===id);if(!s){studentLogout();return}
- const assigned=db.activities.filter(a=>(!a.need||a.need===s.need)&&(!a.level||a.level===s.level));
- layout(`<div class="hero"><h2>أهلًا ${esc(s.name)} 👋</h2><p>دي أنشطتك المقترحة بناءً على ملفك التعليمي.</p></div>
+ const assignedIds=Array.isArray(s.assignedActivities)?s.assignedActivities:[];
+ const assigned=db.activities.filter(a=>assignedIds.includes(a.id));
+ const recommended=db.activities.filter(a=>!assignedIds.includes(a.id)&&(!a.need||a.need===s.need)&&(!a.level||a.level===s.level));
+ const card=a=>`<div class="card"><span class="badge">${esc(a.area)}</span><h3>${esc(a.title)}</h3><p class="muted">${esc(a.level)} • ${a.points} نقطة</p><button class="primary" onclick="completeStudentActivity(${s.id},${a.id})">إنجاز النشاط</button></div>`;
+ layout(`<div class="hero"><h2>أهلًا ${esc(s.name)} 👋</h2><p>دي أنشطتك المخصصة والمقترحة بناءً على ملفك التعليمي.</p></div>
  <div class="grid section"><div class="card stat"><span class="muted">التقدم</span><b>${s.progress||0}%</b></div><div class="card stat"><span class="muted">أنشطة مكتملة</span><b>${s.completed||0}</b></div></div>
- <div class="section"><div class="top"><div><h2>أنشطتي</h2><p class="muted">اختاري نشاطًا واحتسبي إنجازه تجريبيًا.</p></div><button class="secondary" onclick="studentLogout()">خروج</button></div>
- <div class="grid" style="grid-template-columns:repeat(3,1fr)">${assigned.length?assigned.map(a=>`<div class="card"><span class="badge">${esc(a.area)}</span><h3>${esc(a.title)}</h3><p class="muted">${esc(a.level)} • ${a.points} نقطة</p><button class="primary" onclick="completeStudentActivity(${s.id},${a.id})">إنجاز النشاط</button></div>`).join(""):`<div class="card"><div class="empty">مفيش أنشطة مطابقة للملف حاليًا.</div></div>`}</div></div>`);
+ <div class="section"><div class="top"><div><h2>أنشطتي المخصصة 🎯</h2><p class="muted">دي الأنشطة اللي المعلمة عيّنتها لكِ.</p></div><button class="secondary" onclick="studentLogout()">خروج</button></div>
+ <div class="grid" style="grid-template-columns:repeat(3,1fr)">${assigned.length?assigned.map(card).join(""):`<div class="card"><div class="empty">لسه مفيش أنشطة مخصصة ليكِ.</div></div>`}</div></div>
+ <div class="section"><h2>أنشطة مقترحة 📚</h2><p class="muted">اختيارات مناسبة للاحتياج والمستوى.</p><div class="grid" style="grid-template-columns:repeat(3,1fr)">${recommended.length?recommended.map(card).join(""):`<div class="card"><div class="empty">مفيش اقتراحات إضافية حاليًا.</div></div>`}</div></div>`);
 }
 function completeStudentActivity(studentId,activityId){const s=db.students.find(x=>x.id===studentId);if(!s)return;s.completed=(s.completed||0)+1;s.progress=Math.min(100,(s.progress||0)+10);save();toast("أحسنت! تم تسجيل النشاط 🎉");studentHome(studentId)}
 function openTeacherAuth(){
@@ -113,15 +117,27 @@ showModal(`<div class="modalhead"><h2>إضافة طالب</h2><button class="clo
 <div class="field full"><label>ملاحظات المعلمة</label><textarea id="snotes" placeholder="أهداف أو ملاحظات تعليمية مختصرة"></textarea></div>
 </div><div class="actions" style="margin-top:14px"><button class="primary">حفظ الطالب</button></div></form>`);
 }
-function addStudent(e){e.preventDefault();const code=makeStudentCode();db.students.push({id:Date.now(),name:sn.value,age:sa.value,need:sneed.value,level:sl.value,notes:snotes.value,progress:0,completed:0,code});save();closeModal();toast("تمت إضافة الطالب");render()}
+function addStudent(e){e.preventDefault();const code=makeStudentCode();db.students.push({id:Date.now(),name:sn.value,age:sa.value,need:sneed.value,level:sl.value,notes:snotes.value,progress:0,completed:0,assignedActivities:[],code});save();closeModal();toast("تمت إضافة الطالب");render()}
 function studentDetails(id){
 const s=db.students.find(x=>x.id===id); if(!s)return;
+if(!Array.isArray(s.assignedActivities))s.assignedActivities=[];
+const assigned=db.activities.filter(a=>s.assignedActivities.includes(a.id));
 showModal(`<div class="modalhead"><h2>${esc(s.name)}</h2><button class="close" onclick="closeModal()">إغلاق</button></div>
-<p><span class="badge">${esc(s.need)}</span> <span class="badge">${esc(s.level)}</span></p><div class="card"><b>كود دخول الطالب 🔐</b><div id="studentCodeDisplay" style="font-size:28px;font-weight:800;letter-spacing:4px;margin-top:8px">${esc(s.code||"—")}</div><p class="muted">استخدمي هذا الكود في «دخول الطالب». الكود تجريبي ومحلي على هذا الجهاز.</p><div class="actions"><button class="secondary" onclick="copyStudentCode(${s.id})">📋 نسخ الكود</button></div></div>
+<p><span class="badge">${esc(s.need)}</span> <span class="badge">${esc(s.level)}</span></p>
+<div class="card"><b>كود دخول الطالب 🔐</b><div id="studentCodeDisplay" style="font-size:28px;font-weight:800;letter-spacing:4px;margin-top:8px">${esc(s.code||"—")}</div><p class="muted">استخدمي هذا الكود في «دخول الطالب». الكود تجريبي ومحلي على هذا الجهاز.</p><div class="actions"><button class="secondary" onclick="copyStudentCode(${s.id})">📋 نسخ الكود</button></div></div>
 <div class="card"><b>التقدم: ${s.progress||0}%</b><div class="progress" style="margin-top:10px"><i style="width:${s.progress||0}%"></i></div><p class="muted">الأنشطة المكتملة: ${s.completed||0}</p></div>
+<div class="card" style="margin-top:12px"><div class="top"><b>الأنشطة المخصصة 🎯</b><button class="secondary" onclick="openAssignActivity(${s.id})">+ تعيين نشاط</button></div>${assigned.length?`<div style="display:grid;gap:8px;margin-top:10px">${assigned.map(a=>`<div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><span><b>${esc(a.title)}</b><div class="muted">${esc(a.level)} • ${a.points} نقطة</div></span><button class="danger" onclick="unassignActivity(${s.id},${a.id})">إزالة</button></div>`).join("")}</div>`:`<p class="muted">لم يتم تعيين أنشطة لهذا الطالب بعد.</p>`}</div>
 <div class="card" style="margin-top:12px"><b>ملاحظات</b><p class="muted">${esc(s.notes)||"لا توجد ملاحظات."}</p></div>
 <div class="actions" style="margin-top:14px"><button class="primary" onclick="assignProgress(${s.id})">تسجيل نشاط مكتمل</button><button class="danger" onclick="deleteStudent(${s.id})">حذف الملف</button></div>`);
 }
+function openAssignActivity(studentId){
+const s=db.students.find(x=>x.id===studentId);if(!s)return;
+const available=db.activities.filter(a=>!(s.assignedActivities||[]).includes(a.id));
+showModal(`<div class="modalhead"><h2>تعيين نشاط لـ ${esc(s.name)}</h2><button class="close" onclick="closeModal()">إغلاق</button></div>
+${available.length?`<form onsubmit="assignActivity(event,${studentId})"><div class="field"><label>اختاري النشاط</label><select id="assignActivityId" required>${available.map(a=>`<option value="${a.id}">${esc(a.title)} — ${esc(a.level)} — ${a.points} نقطة</option>`).join("")}</select></div><p class="muted" style="margin-top:12px">النشاط هيظهر للطالب في قسم «أنشطتي المخصصة».</p><div class="actions" style="margin-top:14px"><button class="primary">تعيين النشاط</button></div></form>`:`<div class="empty">كل الأنشطة الحالية متعيّنة للطالب بالفعل.</div>`}`);
+}
+function assignActivity(e,studentId){e.preventDefault();const s=db.students.find(x=>x.id===studentId);if(!s)return;if(!Array.isArray(s.assignedActivities))s.assignedActivities=[];const aid=Number(document.getElementById('assignActivityId').value);if(!s.assignedActivities.includes(aid))s.assignedActivities.push(aid);save();closeModal();toast('تم تعيين النشاط للطالب 🎯');studentDetails(studentId)}
+function unassignActivity(studentId,activityId){const s=db.students.find(x=>x.id===studentId);if(!s)return;s.assignedActivities=(s.assignedActivities||[]).filter(id=>id!==activityId);save();closeModal();toast('تمت إزالة النشاط');studentDetails(studentId)}
 function copyStudentCode(id){const s=db.students.find(x=>x.id===id);if(!s?.code)return; if(navigator.clipboard?.writeText){navigator.clipboard.writeText(String(s.code)).then(()=>toast("تم نسخ كود الطالب 📋")).catch(()=>toast("الكود: "+s.code));}else{toast("الكود: "+s.code)}}
 function assignProgress(id){let s=db.students.find(x=>x.id===id);s.completed=(s.completed||0)+1;s.progress=Math.min(100,(s.progress||0)+10);save();closeModal();toast("تم تحديث التقدم");studentDetails(id)}
 function deleteStudent(id){if(!confirm("حذف الملف التجريبي؟"))return;db.students=db.students.filter(s=>s.id!==id);save();closeModal();render()}
