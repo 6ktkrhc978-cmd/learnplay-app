@@ -34,6 +34,13 @@ let db=JSON.parse(localStorage.getItem(KEY)||'null')||{
  ], view:"home"
 };
 function save(){localStorage.setItem(KEY,JSON.stringify(db))}
+function openTeacherAuth(){
+ const t=db.teacher||{};
+ showModal(`<div class="modalhead"><h2>${t.loggedIn?"حساب المعلمة":"دخول المعلمة"}</h2><button class="close" onclick="closeModal()">إغلاق</button></div>
+ ${t.loggedIn?`<div class="card"><h3 style="margin-top:0">مرحبًا ${esc(t.name||"المعلمة")} 👋</h3><p class="muted">الحساب الحالي تجريبي ومحلي على هذا الجهاز فقط.</p><div class="actions"><button class="danger" onclick="teacherLogout()">تسجيل الخروج</button></div></div>`:`<form onsubmit="teacherLogin(event)"><div class="formgrid"><div class="field full"><label>اسم المعلمة</label><input id="teacherName" required placeholder="مثال: أستاذة سما"></div><div class="field full"><label>رمز دخول تجريبي (4 أرقام)</label><input id="teacherPin" required inputmode="numeric" pattern="[0-9]{4}" maxlength="4" placeholder="1234"></div></div><p class="muted" style="margin-top:12px">للاختبار فقط: لا تستخدمي كلمة مرور حقيقية هنا.</p><div class="actions"><button class="primary">دخول</button></div></form>`}`);
+}
+function teacherLogin(e){e.preventDefault();const name=document.getElementById("teacherName").value.trim();const pin=document.getElementById("teacherPin").value.trim();db.teacher={name,email:"",pin,loggedIn:true};save();closeModal();toast("تم تسجيل دخول المعلمة");render()}
+function teacherLogout(){db.teacher.loggedIn=false;save();closeModal();toast("تم تسجيل الخروج");render()}
 function esc(s){return String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]))}
 function nav(){
 return `<nav>
@@ -45,7 +52,7 @@ return `<nav>
 }
 function layout(content){
 document.getElementById("root").innerHTML=`<div class="app">
-<div class="top"><div class="brand"><div class="logo">L&P</div><div><h1>Learn & Play</h1><p>منصة تعليمية فردية للمتعلمين ذوي الاحتياجات التعليمية</p></div></div><span class="pill">وضع المعلمة</span></div>
+<div class="top"><div class="brand"><div class="logo">L&P</div><div><h1>Learn & Play</h1><p>منصة تعليمية فردية للمتعلمين ذوي الاحتياجات التعليمية</p></div></div><button class="pill" onclick="openTeacherAuth()" style="border:0;cursor:pointer">👩‍🏫 وضع المعلمة</button></div>
 ${nav()}${content}</div>`;
 }
 function go(v){db.view=v;save();render()}
