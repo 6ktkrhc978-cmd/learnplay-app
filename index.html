@@ -33,6 +33,10 @@ let db=JSON.parse(localStorage.getItem(KEY)||'null')||{
   {id:2,title:"مطابقة الصور",area:"انتباه وتواصل",need:"اضطراب طيف التوحد",level:"مبتدئ",points:10}
  ], view:"home"
 };
+// Migration: give older demo students a 6-digit login code if they do not have one.
+if(Array.isArray(db.students)){
+  db.students.forEach(s=>{ if(!s.code) s.code=String(Math.floor(100000+Math.random()*900000)); });
+}
 function save(){localStorage.setItem(KEY,JSON.stringify(db))}
 function makeStudentCode(){let code; do{code=String(Math.floor(100000+Math.random()*900000))}while(db.students.some(s=>s.code===code));return code}
 function openStudentLogin(){
@@ -113,11 +117,12 @@ function addStudent(e){e.preventDefault();const code=makeStudentCode();db.studen
 function studentDetails(id){
 const s=db.students.find(x=>x.id===id); if(!s)return;
 showModal(`<div class="modalhead"><h2>${esc(s.name)}</h2><button class="close" onclick="closeModal()">إغلاق</button></div>
-<p><span class="badge">${esc(s.need)}</span> <span class="badge">${esc(s.level)}</span></p><div class="card"><b>كود دخول الطالب</b><div style="font-size:28px;font-weight:800;letter-spacing:4px;margin-top:8px">${esc(s.code||"—")}</div><p class="muted">الكود تجريبي ومحلي على هذا الجهاز.</p></div>
+<p><span class="badge">${esc(s.need)}</span> <span class="badge">${esc(s.level)}</span></p><div class="card"><b>كود دخول الطالب 🔐</b><div id="studentCodeDisplay" style="font-size:28px;font-weight:800;letter-spacing:4px;margin-top:8px">${esc(s.code||"—")}</div><p class="muted">استخدمي هذا الكود في «دخول الطالب». الكود تجريبي ومحلي على هذا الجهاز.</p><div class="actions"><button class="secondary" onclick="copyStudentCode(${s.id})">📋 نسخ الكود</button></div></div>
 <div class="card"><b>التقدم: ${s.progress||0}%</b><div class="progress" style="margin-top:10px"><i style="width:${s.progress||0}%"></i></div><p class="muted">الأنشطة المكتملة: ${s.completed||0}</p></div>
 <div class="card" style="margin-top:12px"><b>ملاحظات</b><p class="muted">${esc(s.notes)||"لا توجد ملاحظات."}</p></div>
 <div class="actions" style="margin-top:14px"><button class="primary" onclick="assignProgress(${s.id})">تسجيل نشاط مكتمل</button><button class="danger" onclick="deleteStudent(${s.id})">حذف الملف</button></div>`);
 }
+function copyStudentCode(id){const s=db.students.find(x=>x.id===id);if(!s?.code)return; if(navigator.clipboard?.writeText){navigator.clipboard.writeText(String(s.code)).then(()=>toast("تم نسخ كود الطالب 📋")).catch(()=>toast("الكود: "+s.code));}else{toast("الكود: "+s.code)}}
 function assignProgress(id){let s=db.students.find(x=>x.id===id);s.completed=(s.completed||0)+1;s.progress=Math.min(100,(s.progress||0)+10);save();closeModal();toast("تم تحديث التقدم");studentDetails(id)}
 function deleteStudent(id){if(!confirm("حذف الملف التجريبي؟"))return;db.students=db.students.filter(s=>s.id!==id);save();closeModal();render()}
 function activitiesPage(){
